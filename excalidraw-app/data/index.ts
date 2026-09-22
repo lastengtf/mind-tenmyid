@@ -226,7 +226,7 @@ export const importFromBackend = async (
       return {
         elements: data.elements || null,
         appState: data.appState || null,
-        files: data.files || null,
+        files: data.files,
       };
     } catch (error: any) {
       console.warn(
