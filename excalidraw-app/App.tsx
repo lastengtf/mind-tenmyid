@@ -278,6 +278,7 @@ const initializeScene = async (opts: {
             // localStorage user settings which we do not persist on server.
             localDataState?.appState,
           ),
+          files: imported.files,
         };
       }
       scene.scrollToContent = true;
@@ -507,30 +508,42 @@ const ExcalidrawWrapper = () => {
           }, [] as FileId[]) || [];
 
         if (data.isExternalScene) {
-          if (fileIds.length) {
-            // Direct Firebase call (not through FileManager), so track manually
-            FileStatusStore.updateStatuses(
-              fileIds.map((id) => [id, "loading"]),
-            );
-          }
-          loadFilesFromFirebase(
-            `${FIREBASE_STORAGE_PREFIXES.shareLinkFiles}/${data.id}`,
-            data.key,
-            fileIds,
-          ).then(({ loadedFiles, erroredFiles }) => {
-            excalidrawAPI.addFiles(loadedFiles);
-            updateStaleImageStatuses({
-              excalidrawAPI,
-              erroredFiles,
-              elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
+          if (data.scene.files) {
+            const filesList = Object.values(data.scene.files);
+            excalidrawAPI.addFiles(filesList);
+            LocalData.fileStorage.saveFiles({
+              elements: data.scene.elements || [],
+              files: data.scene.files,
             });
-            FileStatusStore.updateStatuses([
-              ...loadedFiles.map((f) => [f.id, "loaded"] as [FileId, "loaded"]),
-              ...[...erroredFiles.keys()].map(
-                (id) => [id, "error"] as [FileId, "error"],
-              ),
-            ]);
-          });
+            FileStatusStore.updateStatuses(
+              filesList.map((f) => [f.id, "loaded"] as [FileId, "loaded"]),
+            );
+          } else {
+            if (fileIds.length) {
+              // Direct Firebase call (not through FileManager), so track manually
+              FileStatusStore.updateStatuses(
+                fileIds.map((id) => [id, "loading"]),
+              );
+            }
+            loadFilesFromFirebase(
+              `${FIREBASE_STORAGE_PREFIXES.shareLinkFiles}/${data.id}`,
+              data.key,
+              fileIds,
+            ).then(({ loadedFiles, erroredFiles }) => {
+              excalidrawAPI.addFiles(loadedFiles);
+              updateStaleImageStatuses({
+                excalidrawAPI,
+                erroredFiles,
+                elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
+              });
+              FileStatusStore.updateStatuses([
+                ...loadedFiles.map((f) => [f.id, "loaded"] as [FileId, "loaded"]),
+                ...[...erroredFiles.keys()].map(
+                  (id) => [id, "error"] as [FileId, "error"],
+                ),
+              ]);
+            });
+          }
         } else if (isInitialLoad) {
           if (fileIds.length) {
             LocalData.fileStorage

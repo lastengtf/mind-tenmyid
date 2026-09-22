@@ -226,6 +226,7 @@ export const importFromBackend = async (
       return {
         elements: data.elements || null,
         appState: data.appState || null,
+        files: data.files || null,
       };
     } catch (error: any) {
       console.warn(
@@ -254,7 +255,7 @@ export const exportToBackend = async (
 
   const payload = await compressData(
     new TextEncoder().encode(
-      serializeAsJSON(elements, appState, files, "database"),
+      serializeAsJSON(elements, appState, files, "local"),
     ),
     { encryptionKey },
   );
@@ -285,10 +286,14 @@ export const exportToBackend = async (
       url.hash = `json=${json.id},${encryptionKey}`;
       const urlString = url.toString();
 
-      await saveFilesToFirebase({
-        prefix: `/files/shareLinks/${json.id}`,
-        files: filesToUpload,
-      });
+      try {
+        await saveFilesToFirebase({
+          prefix: `/files/shareLinks/${json.id}`,
+          files: filesToUpload,
+        });
+      } catch (fbErr) {
+        console.warn("saveFilesToFirebase skipped/failed:", fbErr);
+      }
 
       return { url: urlString, errorMessage: null };
     } else if (json.error_class === "RequestTooLargeError") {

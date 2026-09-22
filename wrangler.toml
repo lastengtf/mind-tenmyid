@@ -1,6 +1,11 @@
 name = "mind-tenmyid"
+main = "worker/index.ts"
 compatibility_date = "2024-09-23"
 
 [assets]
 directory = "excalidraw-app/build"
 not_found_handling = "single-page-application"
+
+[[kv_namespaces]]
+binding = "Mind_KV"
+id = "0239a834f59b4bbd9aaafe56624beb8e"
