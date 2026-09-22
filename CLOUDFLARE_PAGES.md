@@ -6,17 +6,18 @@ Proyek ini telah dikonfigurasi untuk dapat di-deploy ke **Cloudflare** menggunak
 
 ## ⚙️ Pengaturan Build Configuration di Cloudflare Dashboard
 
-Sesuai dengan tampilan pada menu **Build configuration** di dashboard Cloudflare Anda:
+Sesuai dengan pengaturan di dashboard Cloudflare Anda:
 
-| Kolom | Nilai yang Harus Diisi |
+| Kolom | Nilai Rekomendasi (Default Cloudflare) |
 | :--- | :--- |
 | **Build command** | `yarn run build` |
-| **Deploy command** | `npx wrangler deploy --config excalidraw-app/wrangler.toml` |
-| **Version command** | `npx wrangler versions upload --config excalidraw-app/wrangler.toml` |
+| **Deploy command** | `npx wrangler deploy` |
 | **Root directory** | `/` |
 
 ---
 
-## 💡 Penjelasan:
-- Karena proyek ini adalah *monorepo workspace*, perintah `npx wrangler deploy` bawaan Cloudflare tidak tahu subfolder mana yang harus di-deploy.
-- Dengan menambahkan `--config excalidraw-app/wrangler.toml`, Wrangler akan langsung mengenali konfigurasi aset web statis Excalidraw dan folder `build`-nya tanpa error deteksi workspace.
+## 💡 Penjelasan Masalah & Solusi:
+- **Penyebab Error Sebelumnya:** Cloudflare menjalankan perintah `npx wrangler deploy` langsung di root folder repository. Karena proyek ini adalah *monorepo / workspaces*, Wrangler kebingungan mencari target aplikasi jika tidak ada file konfigurasi `wrangler.toml` di root.
+- **Solusi yang Diterapkan:** Kami telah menambahkan file [wrangler.toml](file:///c:/Users/TEN/WorkSpaceTen/04.%20PEKERJAAN%20%28Create%20Value%29/02.%20NON-PROFIT/Membangun%20Digitalisasi%20dan%20Automasi/01.CODING/TEN-MY-ID/mind-ten-my-id/wrangler.toml) di root directory yang mengarahkan aset statis langsung ke `excalidraw-app/build`.
+- Dengan ini, Cloudflare dapat langsung menjalankan perintah default `npx wrangler deploy` tanpa error deteksi workspace.
+
