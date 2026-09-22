@@ -1,6 +1,6 @@
 interface Env {
   Mind_KV: KVNamespace;
-  ASSETS: Fetcher;
+  ASSETS?: Fetcher;
 }
 
 interface KVNamespace {
@@ -28,6 +28,7 @@ const CORS_HEADERS = {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const cleanPath = url.pathname.replace(/\/+$/, "");
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
@@ -37,11 +38,8 @@ export default {
       });
     }
 
-    // 1. POST /api/v2/post or /api/v2/post/ (Save Scene)
-    if (
-      request.method === "POST" &&
-      (url.pathname === "/api/v2/post" || url.pathname === "/api/v2/post/")
-    ) {
+    // 1. POST /api/v2/post (Save Scene)
+    if (request.method === "POST" && cleanPath.endsWith("/api/v2/post")) {
       try {
         const body = await request.arrayBuffer();
         if (!body || body.byteLength === 0) {
@@ -66,6 +64,9 @@ export default {
         const id = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
 
         // Save to Cloudflare KV
+        if (!env.Mind_KV) {
+          throw new Error("KV namespace Mind_KV is not bound");
+        }
         await env.Mind_KV.put(id, body);
 
         return new Response(JSON.stringify({ id }), {
@@ -87,8 +88,9 @@ export default {
     }
 
     // 2. GET /api/v2/:id (Load Scene)
-    if (request.method === "GET" && url.pathname.startsWith("/api/v2/")) {
-      const id = url.pathname.replace(/^\/api\/v2\//, "").replace(/\/$/, "");
+    if (request.method === "GET" && cleanPath.includes("/api/v2/")) {
+      const parts = cleanPath.split("/api/v2/");
+      const id = parts[1]?.replace(/\/$/, "");
       if (!id || id === "post") {
         return new Response(JSON.stringify({ error: "Invalid ID" }), {
           status: 400,
@@ -97,6 +99,9 @@ export default {
       }
 
       try {
+        if (!env.Mind_KV) {
+          throw new Error("KV namespace Mind_KV is not bound");
+        }
         const data = await env.Mind_KV.get(id, { type: "arrayBuffer" });
         if (!data) {
           return new Response(JSON.stringify({ error: "Scene not found" }), {
@@ -124,7 +129,11 @@ export default {
       }
     }
 
-    // Pass all other requests to static assets (Excalidraw SPA)
-    return env.ASSETS.fetch(request);
+    // Pass all other requests to static assets if available
+    if (env.ASSETS) {
+      return env.ASSETS.fetch(request);
+    }
+
+    return new Response("Not found", { status: 404 });
   },
 };
